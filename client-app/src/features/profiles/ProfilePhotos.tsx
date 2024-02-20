@@ -1,57 +1,122 @@
 import { observer } from "mobx-react-lite";
 import {
-    Button,
-    Card,
-    CardGroup,
-    Grid,
-    GridColumn,
-    Header,
-    Image,
-    TabPane,
+	Button,
+	Card,
+	CardGroup,
+	Grid,
+	GridColumn,
+	Header,
+	Image,
+	TabPane,
 } from "semantic-ui-react";
-import { Profile } from "../../app/models/profile";
+import { Photo, Profile } from "../../app/models/profile";
 import { useStore } from "../../app/stores/store";
-import { useState } from "react";
+import { SyntheticEvent, useState } from "react";
 import PhotoUploadWidget from "../../app/common/imageUpload/PhotoUploadWidget";
 
 interface Props {
-    profile: Profile;
+	profile: Profile;
 }
 
 export default observer(function ProfilePhotos({ profile }: Props) {
-    const {
-        profileStore: { isCurrentUser },
-    } = useStore();
-    const [addPhotoMode, setAddPhotoMode] = useState(false);
+	const {
+		profileStore: {
+			isCurrentUser,
+			uploadPhoto,
+			uploading,
+			loading,
+			setMainPhoto,
+			deletePhoto,
+		},
+	} = useStore();
+	const [addPhotoMode, setAddPhotoMode] = useState(false);
+	const [target, setTarget] = useState("");
 
-    return (
-        <TabPane>
-            <Grid>
-                <GridColumn width={16}>
-                    <Header floated="left" icon="image" content="Photos" />
-                    {isCurrentUser && (
-                        <Button
-                            floated="right"
-                            basic
-                            content={addPhotoMode ? "Cancel" : "Add Photo"}
-                            onClick={() => setAddPhotoMode(!addPhotoMode)}
-                        />
-                    )}
-                </GridColumn>
-                <GridColumn width={16}>
-                    {addPhotoMode ? (
-                        <PhotoUploadWidget />
-                    ) : (
-                        <CardGroup itemsPerRow={5}>
-                            {profile.photos?.map((photo) => (
-                                <Card key={photo.url}>
-                                    <Image src={photo.url} />
-                                </Card>
-                            ))}
-                        </CardGroup>
-                    )}
-                </GridColumn>
-            </Grid>
-        </TabPane>
-    );
+	function handleSetMainPhoto(
+		photo: Photo,
+		e: SyntheticEvent<HTMLButtonElement>
+	) {
+		setTarget(e.currentTarget.name);
+		setMainPhoto(photo);
+	}
+
+	function handleDeletePhoto(
+		photo: Photo,
+		e: SyntheticEvent<HTMLButtonElement>
+	) {
+		setTarget(e.currentTarget.name);
+		deletePhoto(photo);
+	}
+
+	function handlePhotoUpload(file: Blob) {
+		uploadPhoto(file).then(() => setAddPhotoMode(false));
+	}
+
+	return (
+		<TabPane>
+			<Grid>
+				<GridColumn width={16}>
+					<Header floated="left" icon="image" content="Photos" />
+					{isCurrentUser && (
+						<Button
+							floated="right"
+							basic
+							content={addPhotoMode ? "Cancel" : "Add Photo"}
+							onClick={() => setAddPhotoMode(!addPhotoMode)}
+						/>
+					)}
+				</GridColumn>
+				<GridColumn width={16}>
+					{addPhotoMode ? (
+						<PhotoUploadWidget
+							uploadPhoto={handlePhotoUpload}
+							loading={uploading}
+						/>
+					) : (
+						<CardGroup itemsPerRow={5}>
+							{profile.photos?.map((photo) => (
+								<Card key={photo.url}>
+									<Image src={photo.url} />
+									{isCurrentUser && (
+										<Button.Group fluid widths={2}>
+											<Button
+												basic
+												content="Main"
+												color="green"
+												name={photo.id + "main"}
+												disabled={photo.isMain}
+												loading={
+													target ===
+														photo.id + "main" &&
+													loading
+												}
+												onClick={(e) =>
+													handleSetMainPhoto(photo, e)
+												}
+											/>
+											<Button
+												basic
+												name={photo.id + "delete"}
+												loading={
+													target ===
+														photo.id + "delete" &&
+													loading
+												}
+                                                disabled={photo.isMain}
+												color="red"
+												icon="trash"
+												onClick={(e) =>
+													handleDeletePhoto(photo, e)
+												}
+											/>
+										</Button.Group>
+									)}
+								</Card>
+							))}
+						</CardGroup>
+					)}
+				</GridColumn>
+			</Grid>
+		</TabPane>
+	);
 });
