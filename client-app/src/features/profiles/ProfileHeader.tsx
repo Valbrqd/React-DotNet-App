@@ -1,5 +1,4 @@
 import {
-	Button,
 	Divider,
 	Grid,
 	GridColumn,
@@ -8,7 +7,6 @@ import {
 	ItemContent,
 	ItemGroup,
 	ItemImage,
-	Reveal,
 	Segment,
 	Statistic,
 } from "semantic-ui-react";

@@ -1,76 +1,76 @@
 import {
-	HubConnection,
-	HubConnectionBuilder,
-	LogLevel,
+    HubConnection,
+    HubConnectionBuilder,
+    LogLevel,
 } from "@microsoft/signalr";
 import { ChatComment } from "../models/comment";
 import { makeAutoObservable, runInAction } from "mobx";
 import { store } from "./store";
 
 export default class CommentStore {
-	comments: ChatComment[] = [];
-	hubConnection: HubConnection | null = null;
+    comments: ChatComment[] = [];
+    hubConnection: HubConnection | null = null;
 
-	constructor() {
-		makeAutoObservable(this);
-	}
+    constructor() {
+        makeAutoObservable(this);
+    }
 
-	createHubconnection = (activityId: string) => {
-		if (store.activityStore.selectedActivity) {
-			this.hubConnection = new HubConnectionBuilder()
-				.withUrl(
-					"http://localhost:5000/chat?activityId=" + activityId,
-					{
-						accessTokenFactory: () => store.userStore.user?.token!,
-					}
-				)
-				.withAutomaticReconnect()
-				.configureLogging(LogLevel.Information)
-				.build();
+    createHubconnection = (activityId: string) => {
+        if (store.activityStore.selectedActivity) {
+            this.hubConnection = new HubConnectionBuilder()
+                .withUrl(
+                    import.meta.env.VITE_CHAT_URL + "?activityId=" + activityId,
+                    {
+                        accessTokenFactory: () => store.userStore.user?.token!,
+                    }
+                )
+                .withAutomaticReconnect()
+                .configureLogging(LogLevel.Information)
+                .build();
 
-			this.hubConnection
-				.start()
-				.catch((error) =>
-					console.log("Error establishing connection: ", error)
-				);
+            this.hubConnection
+                .start()
+                .catch((error) =>
+                    console.log("Error establishing connection: ", error)
+                );
 
-			this.hubConnection.on("LoadComments", (comments: ChatComment[]) => {
-				runInAction(() => {
-					comments.forEach((comment) => {
-						comment.createAt = new Date(comment.createAt + "Z");
-					});
-					this.comments = comments;
-				});
-			});
+            this.hubConnection.on("LoadComments", (comments: ChatComment[]) => {
+                runInAction(() => {
+                    comments.forEach((comment) => {
+                        comment.createAt = new Date(comment.createAt + "Z");
+                    });
+                    this.comments = comments;
+                });
+            });
 
-			this.hubConnection.on("ReceiveComment", (comment: ChatComment) => {
-				runInAction(() => {
-					comment.createAt = new Date(comment.createAt);
-					this.comments.unshift(comment);
-				});
-			});
-		}
-	};
+            this.hubConnection.on("ReceiveComment", (comment: ChatComment) => {
+                runInAction(() => {
+                    comment.createAt = new Date(comment.createAt);
+                    this.comments.unshift(comment);
+                });
+            });
+        }
+    };
 
-	stopHubConnection = () => {
-		this.hubConnection
-			?.stop()
-			.catch((error) =>
-				console.log("Error stopping connection: ", error)
-			);
-	};
+    stopHubConnection = () => {
+        this.hubConnection
+            ?.stop()
+            .catch((error) =>
+                console.log("Error stopping connection: ", error)
+            );
+    };
 
-	clearComments = () => {
-		this.comments = [];
-		this.stopHubConnection();
-	};
+    clearComments = () => {
+        this.comments = [];
+        this.stopHubConnection();
+    };
 
-	addComment = async (values: any) => {
-		values.activityId = store.activityStore.selectedActivity?.id;
-		try {
-			await this.hubConnection?.invoke("SendComment", values);
-		} catch (error) {
-			console.log("error :>> ", error);
-		}
-	};
+    addComment = async (values: any) => {
+        values.activityId = store.activityStore.selectedActivity?.id;
+        try {
+            await this.hubConnection?.invoke("SendComment", values);
+        } catch (error) {
+            console.log("error :>> ", error);
+        }
+    };
 }
